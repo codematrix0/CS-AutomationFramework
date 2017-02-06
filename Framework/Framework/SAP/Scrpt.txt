@@ -1,0 +1,160 @@
+		'**************************************************************************************
+		'Project Name 	: Viacom
+		'Script Name	: TS_03_01_002_CreateShoppingCart
+		'Action Name	: TSA_03_01_002_CreateShoppingCart
+		'Scripted by 	: Gurleen Singh
+		'Date scripted 	: 27-Aug-2014
+		'***************************************************************************************
+
+		Call Action_Initialize
+
+
+		' wait 1
+		MarketPortalLogin trim(DataTable.Value("Market_Username",dtlocalsheet)),trim(DataTable.Value("Market_Password",dtlocalsheet))
+		' wait 1
+				
+		' wait 1
+	' 	DataTable.Value("AssignNumber",dtlocalsheet)=Environment.Value("Proposed_No")&".01"
+		' End If
+		' wait 1
+				
+		'Opening Shopping Web Portal
+		
+		If f_Web_Image("icon-shopping-147x150.gif","Exist")=True Then
+			f_Web_Image "icon-shopping-147x150.gif","Highlight"
+			f_Web_Image "icon-shopping-147x150.gif","Click"
+			'f_Web_WaitForObject "sapbutton","Order"
+			f_Web_Sync_PageLoad
+			Reporter.ReportEvent micPass,"Create Shopping Cart","Successfully Opened Shopping Cart Portal"
+		Else
+			Reporter.ReportEvent micFail,"Create Shopping Cart","Create shopping cart icon not found on page"
+		End If
+		
+		
+		'Multiple Orders
+		For Iterator = 1 To trim(DataTable.Value("NumberOfOrders",dtlocalsheet)) Step 1
+		Reporter.ReportEvent micDone,"Order Number","Adding Details of "& Iterator &" Order"
+	
+		f_Web_SAPDropDownMenu "Add Item","Goods/Services Request","Select"
+		'Add Item Details
+		
+		f_Web_TextBox "Description",trim(DataTable.Value("Description",dtlocalsheet)),"Set"
+		f_Web_TextBox "Product Category",trim(DataTable.Value("ProductID",dtlocalsheet)),"Set"
+		f_Web_TextBox "Quantity / Unit",trim(DataTable.Value("Quantity"&Iterator,dtlocalsheet)),"Set"
+
+		f_Web_SAPEdit_ToField "Quantity / Unit",trim(DataTable.Value("Unit",dtlocalsheet)),172,"Set" 
+		f_Web_TextBox "Net Price / Currency",trim(DataTable.Value("NetPrice"&Iterator,dtlocalsheet)),"Set"
+		f_Web_SAPEdit_ToField "Net Price / Currency",trim(DataTable.Value("CountryCurrency",dtlocalsheet)),172,"Set" 
+	
+		Reporter.ReportEvent micPass,"Create Shopping Cart","Creating a shopping Cart Item with details : "& trim(DataTable.Value("Description",dtlocalsheet))&" and Product ID : "& trim(DataTable.Value("ProductID",dtlocalsheet))
+		PortalScreenCapture "CreateShoppingCart"
+		f_Web_Buttons "Add to Cart","Click"
+		f_Web_Sync_PageLoad
+		'Item Data
+	   
+		f_Web_Buttons "Details","Click"
+	   				
+		f_Web_SAPTabStrip "Item Data","Click"
+		Wait 2
+		stemp1 = CStr(trim(DataTable.Value("Description",dtlocalsheet)) & Iterator)
+		
+		f_Web_TextBox "Description",stemp1,"Set"
+		stemp1=Empty
+		'f_Web_SAPEdit_ToField "Order Quantity / Unit",trim(DataTable.Value("Unit",dtlocalsheet)),115,"Set"
+		If DataTable.Value("CompanyCode",dtlocalsheet) <> "" Then
+			f_Web_TextBox "Company Code",trim(DataTable.Value("CompanyCode",dtlocalsheet)),"Set"	
+		End If
+		
+		f_Web_ComboBox "Purchasing Group",trim(DataTable.Value("PurchasingGroup",dtlocalsheet)),"Select"
+		f_Web_Sync_PageLoad
+		f_Web_SAPTabStrip "Supplier Information","Click"
+	
+		f_Web_TextBox "Supplier",trim(DataTable.Value("Supplier",dtlocalsheet)),"Set"
+		
+		f_Web_Buttons "Assign Supplier","Click"
+		f_Web_Sync_PageLoad
+		f_Web_TextBox "Supplier","","highlight"
+		
+		PortalScreenCapture "SupplierInformation"
+		
+		Reporter.ReportEvent micPass,"Supplier Information","Entered Supplier Set As : "& trim(DataTable.Value("Supplier",dtlocalsheet))
+		
+		'Account Assignment
+
+		f_Web_SAPTabStrip "Account Assignment","Click"
+
+		f_Web_SAPTable "Account Assignment Type",2,"SAPList",trim(DataTable.Value("AccountAssignment",dtlocalsheet)),"Select"
+		Wait 5
+		Set objTble=f_Web_SAPTable("Assign Number",2,"SAPEdit","","OBJTABLE")
+		
+		objTble.SelectCell 2,5
+		objTble.SetCellData 2,5,trim(DataTable.Value("AssignNumber",dtlocalsheet))
+		Set objTble=Nothing
+		
+		
+		Reporter.ReportEvent micPass,"Account Assignment","Entered Account Assignment Type : "&trim(DataTable.Value("AccountAssignment",dtlocalsheet))&" and Assignment Number : "&trim(DataTable.Value("AssignNumber",dtlocalsheet))
+		
+		
+		'Address
+		'Browser("VIACOM - MARKET - Quality").SAPPortal("Home - VIACOM - MARKET").Frame("isolatedWorkArea").SAPTabStrip("Item DataItem Data-").Select "Delivery Address/Performance Location"
+		f_Web_SAPTabStrip "Delivery Address/Performance Location","Click"
+
+		If f_Web_TextBox("Name:","NA","Exist") Then
+			Set nameSAPEdit=f_Web_TextBox("Name:","NA","Object")
+		Else
+			Set nameSAPEdit=f_Web_TextBox("Name","","Object")
+				nameSAPEdit.OpenPossibleEntries
+		wait 2
+		f_WEB_GetBrowser.SAPButton("micclass:=SAPButton","html tag:=A","innertext:=Search","Index:=1").Click		
+		Do
+		Wait 1
+		Loop While f_Web_SAPTable("Name of Org.","","","","EXIST") <> True
+	
+		f_Web_SAPTable "Name of Org.",2,"WebElement","","Click"
+
+		f_Web_Buttons "OK","Click"
+		End If
+		wait 1
+			
+		
+		f_Web_Sync_PageLoad
+		
+		f_Web_SAPTabStrip "Approval Process Overview","Click"
+		
+		PortalScreenCapture "ApprovalProcessOverview"
+				
+		f_Web_MultiObject "SAPButton","Check",0,"Click"
+		'f_Web_Buttons "Check","Click"		
+		'f_Web_Sync_PageLoad
+		wait 3
+		PortalScreenCapture "Shopping_Cart_Checked"
+		
+		Next
+		
+		
+		'Order Of Shopping Cart
+		f_Web_Buttons "Order","Click"
+		f_Web_Sync_PageLoad
+		f_Web_Elements "ordered successfully","SPAN","highlight" 'highlight for screenshot
+		PortalScreenCapture "Shopping_Cart_Ordered"
+		If f_Web_Elements("ordered successfully","SPAN","Exist")=True Then
+			sOrder=f_WEB_GetBrowser.WebElement("innertext:=Shopping cart.*ordered successfully","html tag:=SPAN").getROProperty("innertext")
+			stemp=split(sOrder," ")
+			sName=stemp(2)&" "& stemp(3)&" "& stemp(4)
+			sName=Right(sName,Len(sName)-1)
+			sName=Left(sName,Len(sName)-1)
+			Environment.Value("ShoppingCartName")=sName
+			Environment.Value("ShoppingCartNumber")=stemp(7)
+			Reporter.ReportEvent micPass,"Placing Order","Successfully placed the order, Message from portal : "& sOrder
+		Else
+			Reporter.ReportEvent micFail,"Placing Order","Shopping Cart Couldn't Be ordered"
+			ExitTestIteration
+		End If
+		
+		f_Web_ReturnHomePage
+		
+		Call Action_Closure
+		
+		
+		
+		
